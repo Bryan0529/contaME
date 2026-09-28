@@ -1,0 +1,7 @@
+{
+  "name": "contaME",
+  "description": "Control de gastos personales, ingresos, metas de ahorro, presupuestos y gráficos financieros con sincronización.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

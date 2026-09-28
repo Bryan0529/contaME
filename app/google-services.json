@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "252590588787",
+    "project_id": "contame-cb765",
+    "storage_bucket": "contame-cb765.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:252590588787:android:0da622b1ee1610a4ab3b06",
+        "android_client_info": {
+          "package_name": "com.uma.contame"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "252590588787-dhko4k28tsftasugvp0ujj1a745ao69s.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.uma.contame",
+            "certificate_hash": "32568a857ea465246a16a00dd7d8ef6eba4b01b7"
+          }
+        },
+        {
+          "client_id": "252590588787-vu9hk7mh4cil9ris3sjvfp8l7m57rl73.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJwsk5MhrhvfBL8pgfoZSu_LAWeAZOrVs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "252590588787-vu9hk7mh4cil9ris3sjvfp8l7m57rl73.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
