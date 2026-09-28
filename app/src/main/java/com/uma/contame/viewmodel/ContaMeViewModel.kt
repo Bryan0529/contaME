@@ -123,6 +123,9 @@ class ContaMeViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             authManager.currentUser.collect { user ->
                 repository.switchUser(user?.uid)
+                if (user != null && user.uid.isNotEmpty()) {
+                    repository.pushAllLocalToCloud(user.uid)
+                }
             }
         }
     }

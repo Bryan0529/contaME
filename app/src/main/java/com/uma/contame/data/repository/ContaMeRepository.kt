@@ -60,25 +60,56 @@ class ContaMeRepository private constructor(
         Log.d(tag, "Cambiando de usuario: [${_currentUserId.value}] -> [$targetUid]")
         _currentUserId.value = targetUid
 
-        // Trigger cloud sync for the newly selected user
+        // Trigger cloud sync and upload local transactions for the newly selected user
         if (targetUid != "local") {
             coroutineScope.launch {
+                pushAllLocalToCloud(targetUid)
                 syncFromCloud(targetUid)
             }
         }
     }
 
+    suspend fun pushAllLocalToCloud(userId: String) = withContext(Dispatchers.IO) {
+        if (userId == "local") return@withContext
+        try {
+            val allTx = database.transactionDao().getAllTransactionsAnyUser()
+            for (tx in allTx) {
+                if (tx.userId == "local") {
+                    database.transactionDao().insertOrUpdate(tx.copy(userId = userId))
+                }
+                firestoreService.saveTransaction(userId, tx.toDomain())
+            }
+            Log.d(tag, "pushAllLocalToCloud: ${allTx.size} transacciones sincronizadas a Firebase para $userId")
+        } catch (e: Exception) {
+            Log.w(tag, "Error en pushAllLocalToCloud: ${e.message}")
+        }
+    }
+
     suspend fun saveTransaction(item: TransactionItem): Result<Unit> = withContext(Dispatchers.IO) {
-        val uid = _currentUserId.value
-        // 1. Save locally in Room with current user id
+        val authUid = try {
+            com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+        } catch (e: Exception) {
+            null
+        }
+        val uid = when {
+            _currentUserId.value != "local" -> _currentUserId.value
+            !authUid.isNullOrEmpty() -> {
+                _currentUserId.value = authUid
+                authUid
+            }
+            else -> "local"
+        }
+
+        // 1. Guardar localmente en Room
         database.transactionDao().insertOrUpdate(TransactionEntity.fromDomain(item, uid))
 
-        // 2. Sync to Firebase Firestore under user's collection
-        if (uid != "local") {
+        // 2. Sincronizar inmediatamente a Firebase Firestore (tanto en raíz como en subcolección de usuario)
+        val targetFirebaseUid = if (uid != "local") uid else authUid
+        if (!targetFirebaseUid.isNullOrEmpty() && targetFirebaseUid != "local") {
             try {
-                firestoreService.saveTransaction(uid, item)
+                firestoreService.saveTransaction(targetFirebaseUid, item)
             } catch (e: Exception) {
-                Log.w(tag, "Local guardado, pero sync Firebase demorado [$uid]: ${e.message}")
+                Log.w(tag, "Local guardado, pero sync Firebase demorado [$targetFirebaseUid]: ${e.message}")
             }
         }
         Result.success(Unit)

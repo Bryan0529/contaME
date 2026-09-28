@@ -60,7 +60,7 @@ class FirebaseFirestoreService {
     }
 
     suspend fun saveTransaction(userId: String, item: TransactionItem): Result<Unit> {
-        val col = userTransactions(userId) ?: return Result.failure(Exception("Firebase no está configurado"))
+        val fs = firestore ?: return Result.failure(Exception("Firebase no está configurado"))
         return try {
             val data = hashMapOf(
                 "id" to item.id,
@@ -77,10 +77,19 @@ class FirebaseFirestoreService {
                 "notes" to item.notes,
                 "updatedAt" to System.currentTimeMillis()
             )
-            col.document(item.id)
+            // 1. Guardar en subcolección de usuario: users/{userId}/transactions/{id}
+            fs.collection("users").document(userId).collection("transactions")
+                .document(item.id)
                 .set(data, SetOptions.merge())
                 .await()
-            Log.d(tag, "Transacción guardada en Firebase para propietarioUid [$userId]: ${item.id}")
+
+            // 2. Guardar también en la colección principal raíz: transactions/{id}
+            fs.collection("transactions")
+                .document(item.id)
+                .set(data, SetOptions.merge())
+                .await()
+
+            Log.d(tag, "Transacción guardada en Firebase (subcolección y raíz) para [$userId]: ${item.title} ($${item.amount})")
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(tag, "Error guardando transacción en Firebase [$userId]: ${e.message}", e)
@@ -89,11 +98,10 @@ class FirebaseFirestoreService {
     }
 
     suspend fun deleteTransaction(userId: String, id: String): Result<Unit> {
-        val col = userTransactions(userId) ?: return Result.failure(Exception("Firebase no está configurado"))
+        val fs = firestore ?: return Result.failure(Exception("Firebase no está configurado"))
         return try {
-            col.document(id)
-                .delete()
-                .await()
+            fs.collection("users").document(userId).collection("transactions").document(id).delete().await()
+            fs.collection("transactions").document(id).delete().await()
             Log.d(tag, "Transacción eliminada en Firebase para usuario [$userId]: $id")
             Result.success(Unit)
         } catch (e: Exception) {
