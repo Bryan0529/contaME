@@ -16,9 +16,6 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE userId = :userId ORDER BY timestamp DESC")
     suspend fun getAllTransactionsSnapshot(userId: String): List<TransactionEntity>
 
-    @Query("SELECT * FROM transactions ORDER BY timestamp DESC")
-    suspend fun getAllTransactionsAnyUser(): List<TransactionEntity>
-
     @Query("SELECT * FROM transactions WHERE id = :id AND userId = :userId")
     suspend fun getTransactionById(id: String, userId: String): TransactionEntity?
 

@@ -60,28 +60,26 @@ class ContaMeRepository private constructor(
         Log.d(tag, "Cambiando de usuario: [${_currentUserId.value}] -> [$targetUid]")
         _currentUserId.value = targetUid
 
-        // Trigger cloud sync and upload local transactions for the newly selected user
+        // Sincronizar únicamente los datos propios de este usuario específico
         if (targetUid != "local") {
             coroutineScope.launch {
-                pushAllLocalToCloud(targetUid)
                 syncFromCloud(targetUid)
+                pushUserTransactionsToCloud(targetUid)
             }
         }
     }
 
-    suspend fun pushAllLocalToCloud(userId: String) = withContext(Dispatchers.IO) {
-        if (userId == "local") return@withContext
+    suspend fun pushUserTransactionsToCloud(userId: String) = withContext(Dispatchers.IO) {
+        if (userId == "local" || userId.isBlank()) return@withContext
         try {
-            val allTx = database.transactionDao().getAllTransactionsAnyUser()
-            for (tx in allTx) {
-                if (tx.userId == "local") {
-                    database.transactionDao().insertOrUpdate(tx.copy(userId = userId))
-                }
+            // Sincronizar ÚNICA Y EXCLUSIVAMENTE las transacciones que pertenezcan a este userId
+            val userTx = database.transactionDao().getAllTransactionsSnapshot(userId)
+            for (tx in userTx) {
                 firestoreService.saveTransaction(userId, tx.toDomain())
             }
-            Log.d(tag, "pushAllLocalToCloud: ${allTx.size} transacciones sincronizadas a Firebase para $userId")
+            Log.d(tag, "pushUserTransactionsToCloud: ${userTx.size} transacciones del usuario $userId sincronizadas")
         } catch (e: Exception) {
-            Log.w(tag, "Error en pushAllLocalToCloud: ${e.message}")
+            Log.w(tag, "Error en pushUserTransactionsToCloud: ${e.message}")
         }
     }
 
