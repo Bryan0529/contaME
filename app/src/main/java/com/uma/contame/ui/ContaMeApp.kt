@@ -510,7 +510,7 @@ fun ContaMeApp(
         AlertDialog(
             onDismissRequest = { txToDelete = null },
             title = { Text("Eliminar Registro") },
-            text = { Text("¿Estás seguro de que deseas eliminar este movimiento? Esta acción también se sincronizará con Firebase.") },
+            text = { Text("¿Estás seguro de que deseas eliminar este movimiento?.") },
             confirmButton = {
                 Button(
                     onClick = {
