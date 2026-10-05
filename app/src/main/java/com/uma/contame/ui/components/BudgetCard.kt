@@ -40,6 +40,19 @@ import com.uma.contame.model.MonthlyBudget
 import java.text.NumberFormat
 import java.util.Locale
 
+/**
+ * Tarjeta de la interfaz de usuario que muestra el estado y consumo del presupuesto mensual.
+ *
+ * Incluye una barra de progreso que cambia de color dinámicamente según el estado (verde = normal,
+ * amarillo = advertencia, rojo = excedido), indicadores de disponible/sobregiro y botón de configuración.
+ *
+ * @param budget Modelo del presupuesto mensual configurado.
+ * @param monthlyExpense Suma de los gastos realizados en el mes actual.
+ * @param isExceeded Bandera que indica si se superó el tope del presupuesto.
+ * @param isWarning Bandera que indica si se alcanzó el porcentaje umbral de alerta.
+ * @param onConfigureClick Callback invocado al presionar el botón de ajustar presupuesto.
+ * @param modifier Modificador de Compose.
+ */
 @Composable
 fun BudgetCard(
     budget: MonthlyBudget,
@@ -49,7 +62,7 @@ fun BudgetCard(
     onConfigureClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("es", "US")) }
+    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-US")) }
     val progress = if (budget.budgetLimit > 0) {
         (monthlyExpense / budget.budgetLimit).toFloat().coerceIn(0f, 1f)
     } else 0f
@@ -58,6 +71,7 @@ fun BudgetCard(
         ((monthlyExpense / budget.budgetLimit) * 100).toInt()
     } else 0
 
+    // Animación suave de cambio de color en la barra de progreso
     val barColor by animateColorAsState(
         targetValue = when {
             isExceeded -> Color(0xFFEF4444)
@@ -132,7 +146,7 @@ fun BudgetCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Alert banner if exceeded or warning
+            // Banner informativo de alerta o sobregiro
             if (isExceeded) {
                 Surface(
                     color = Color(0xFFFEE2E2),
@@ -173,7 +187,7 @@ fun BudgetCard(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // Progress bar
+            // Barra de progreso visual
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier

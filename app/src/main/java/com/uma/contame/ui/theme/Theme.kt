@@ -11,6 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
+/**
+ * Esquema de colores para el tema oscuro de la aplicación.
+ */
 private val DarkColorScheme = darkColorScheme(
     primary = EmeraldLight,
     onPrimary = Slate950,
@@ -31,9 +34,12 @@ private val DarkColorScheme = darkColorScheme(
     error = CoralExpense,
     onError = Color.White,
     outline = Slate700,
-    outlineVariant = Slate800
+    outlineVariant = Slate850
 )
 
+/**
+ * Esquema de colores para el tema claro de la aplicación.
+ */
 private val LightColorScheme = lightColorScheme(
     primary = EmeraldPrimary,
     onPrimary = Color.White,
@@ -57,10 +63,18 @@ private val LightColorScheme = lightColorScheme(
     outlineVariant = Slate100
 )
 
+/**
+ * Composable de tema principal para la aplicación `contaME`.
+ *
+ * @param darkTheme Determina si se aplica el tema oscuro.
+ * @param dynamicColor Si es verdadero (desactivado por defecto para mantener la identidad visual financiera),
+ * utiliza los colores dinámicos de Android 12+.
+ * @param content Contenido de la UI al que se le aplicará el tema.
+ */
 @Composable
 fun MyApplicationTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false, // Keep branded financial styling consistent
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

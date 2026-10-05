@@ -3,6 +3,8 @@ package com.uma.contame.data.repository
 import android.content.Context
 import android.util.Log
 import androidx.room.Room
+import com.google.firebase.auth.FirebaseAuth
+import com.uma.contame.auth.UserProfile
 import com.uma.contame.data.local.BudgetEntity
 import com.uma.contame.data.local.ContaMeDatabase
 import com.uma.contame.data.local.SavingsGoalEntity
@@ -23,11 +25,19 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
 
+/**
+ * Repositorio central de datos de la aplicación `contaME`.
+ *
+ * Sirve como la **Única Fuente de la Verdad (Single Source of Truth)**. Coordina las operaciones entre
+ * el almacenamiento local seguro ([ContaMeDatabase] con Room) y el servicio en la nube ([FirebaseFirestoreService]).
+ *
+ * Soporta cambio dinámico de usuario (modo invitado `local` o cuenta autenticada de Firebase) y
+ * sincronización bidireccional automática.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ContaMeRepository private constructor(
     private val database: ContaMeDatabase,
@@ -36,43 +46,77 @@ class ContaMeRepository private constructor(
     private val tag = "ContaMeRepo"
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
+    // ID del usuario activo ("local" para invitado o el UID asignado por Firebase Auth)
     private val _currentUserId = MutableStateFlow("local")
+    /** Flow que expone el ID del usuario actualmente activo. */
     val currentUserId = _currentUserId.asStateFlow()
 
+    /**
+     * Flow reactivo con el listado de transacciones del usuario activo.
+     * Se reactualiza automáticamente cuando cambia el usuario activo o se modifica la base de datos local.
+     */
     val transactions: Flow<List<TransactionItem>> = _currentUserId.flatMapLatest { uid ->
         database.transactionDao().getAllTransactions(uid)
     }.map { list -> list.map { it.toDomain() } }
 
+    /**
+     * Flow reactivo con el listado de metas de ahorro del usuario activo.
+     */
     val savingsGoals: Flow<List<SavingsGoal>> = _currentUserId.flatMapLatest { uid ->
         database.savingsGoalDao().getAllGoals(uid)
     }.map { list -> list.map { it.toDomain() } }
 
+    /**
+     * Obtiene el presupuesto del mes seleccionado en formato Flow reactivo para el usuario activo.
+     *
+     * @param monthYearKey Clave del mes en formato "yyyy-MM".
+     */
     fun getBudgetForMonth(monthYearKey: String): Flow<MonthlyBudget?> {
         return _currentUserId.flatMapLatest { uid ->
             database.budgetDao().getBudgetForMonth(monthYearKey, uid)
         }.map { it?.toDomain() }
     }
 
-    fun switchUser(userId: String?) {
-        val targetUid = userId?.trim()?.ifEmpty { "local" } ?: "local"
-        if (_currentUserId.value == targetUid) return
-
-        Log.d(tag, "Cambiando de usuario: [${_currentUserId.value}] -> [$targetUid]")
+    /**
+     * Cambia la sesión del repositorio hacia el usuario especificado por su perfil.
+     * Si el usuario es un usuario registrado en Firebase, inicia la sincronización de nube.
+     *
+     * @param user Perfil del usuario o `null` para regresar al modo local/invitado.
+     */
+    fun switchUser(user: UserProfile?) {
+        val targetUid = user?.uid?.trim()?.ifEmpty { "local" } ?: "local"
+        val previousUid = _currentUserId.value
         _currentUserId.value = targetUid
 
-        // Sincronizar únicamente los datos propios de este usuario específico
+        Log.d(tag, "Cambiando de usuario: [$previousUid] -> [$targetUid]")
+
         if (targetUid != "local") {
             coroutineScope.launch {
+                firestoreService.ensureUserStructure(
+                    userId = targetUid,
+                    email = user?.email,
+                    displayName = user?.displayName,
+                    photoUrl = user?.photoUrl
+                )
                 syncFromCloud(targetUid)
                 pushUserTransactionsToCloud(targetUid)
             }
         }
     }
 
+    /**
+     * Sobrecarga de [switchUser] recibiendo directamente el ID del usuario.
+     */
+    fun switchUser(userId: String?) {
+        switchUser(if (userId != null && userId != "local") UserProfile(userId, null, null, null) else null)
+    }
+
+    /**
+     * Envía todas las transacciones locales del usuario a la nube de Firebase Firestore.
+     */
     suspend fun pushUserTransactionsToCloud(userId: String) = withContext(Dispatchers.IO) {
         if (userId == "local" || userId.isBlank()) return@withContext
         try {
-            // Sincronizar ÚNICA Y EXCLUSIVAMENTE las transacciones que pertenezcan a este userId
             val userTx = database.transactionDao().getAllTransactionsSnapshot(userId)
             for (tx in userTx) {
                 firestoreService.saveTransaction(userId, tx.toDomain())
@@ -83,9 +127,14 @@ class ContaMeRepository private constructor(
         }
     }
 
+    /**
+     * Guarda o actualiza una transacción tanto en la base de datos local Room como en Firebase.
+     *
+     * @param item Transacción a registrar.
+     */
     suspend fun saveTransaction(item: TransactionItem): Result<Unit> = withContext(Dispatchers.IO) {
         val authUid = try {
-            com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+            FirebaseAuth.getInstance().currentUser?.uid
         } catch (e: Exception) {
             null
         }
@@ -101,7 +150,7 @@ class ContaMeRepository private constructor(
         // 1. Guardar localmente en Room
         database.transactionDao().insertOrUpdate(TransactionEntity.fromDomain(item, uid))
 
-        // 2. Sincronizar inmediatamente a Firebase Firestore (tanto en raíz como en subcolección de usuario)
+        // 2. Sincronizar con Firebase Firestore
         val targetFirebaseUid = if (uid != "local") uid else authUid
         if (!targetFirebaseUid.isNullOrEmpty() && targetFirebaseUid != "local") {
             try {
@@ -113,12 +162,15 @@ class ContaMeRepository private constructor(
         Result.success(Unit)
     }
 
+    /**
+     * Elimina una transacción localmente y en Firebase por su ID.
+     */
     suspend fun deleteTransaction(id: String): Result<Unit> = withContext(Dispatchers.IO) {
         val uid = _currentUserId.value
-        // 1. Delete locally
+        // 1. Eliminar localmente
         database.transactionDao().deleteById(id, uid)
 
-        // 2. Delete in Firebase
+        // 2. Eliminar en Firebase
         if (uid != "local") {
             try {
                 firestoreService.deleteTransaction(uid, id)
@@ -129,6 +181,9 @@ class ContaMeRepository private constructor(
         Result.success(Unit)
     }
 
+    /**
+     * Guarda o actualiza una meta de ahorro en la base local y en la nube.
+     */
     suspend fun saveGoal(goal: SavingsGoal): Result<Unit> = withContext(Dispatchers.IO) {
         val uid = _currentUserId.value
         database.savingsGoalDao().insertOrUpdate(SavingsGoalEntity.fromDomain(goal, uid))
@@ -142,6 +197,9 @@ class ContaMeRepository private constructor(
         Result.success(Unit)
     }
 
+    /**
+     * Elimina una meta de ahorro localmente y en Firebase.
+     */
     suspend fun deleteGoal(id: String): Result<Unit> = withContext(Dispatchers.IO) {
         val uid = _currentUserId.value
         database.savingsGoalDao().deleteById(id, uid)
@@ -155,12 +213,18 @@ class ContaMeRepository private constructor(
         Result.success(Unit)
     }
 
+    /**
+     * Agrega fondos a una meta de ahorro existente en la base de datos local.
+     */
     suspend fun addFundsToGoal(goalId: String, amount: Double): Result<Unit> = withContext(Dispatchers.IO) {
         val uid = _currentUserId.value
         database.savingsGoalDao().addFunds(goalId, uid, amount)
         Result.success(Unit)
     }
 
+    /**
+     * Guarda o actualiza la configuración de presupuesto mensual.
+     */
     suspend fun saveBudget(budget: MonthlyBudget): Result<Unit> = withContext(Dispatchers.IO) {
         val uid = _currentUserId.value
         database.budgetDao().insertOrUpdate(BudgetEntity.fromDomain(budget, uid))
@@ -174,6 +238,11 @@ class ContaMeRepository private constructor(
         Result.success(Unit)
     }
 
+    /**
+     * Descarga y sincroniza la información (transacciones, metas, presupuesto) desde Firebase hacia la base local Room.
+     *
+     * @param userId ID del usuario a sincronizar.
+     */
     suspend fun syncFromCloud(userId: String = _currentUserId.value): Result<String> = withContext(Dispatchers.IO) {
         try {
             if (userId == "local") {
@@ -184,6 +253,7 @@ class ContaMeRepository private constructor(
             }
 
             Log.d(tag, "Iniciando sincronización desde Firebase para usuario [$userId]...")
+            firestoreService.ensureUserStructure(userId, null, null, null)
             val cloudTxRes = firestoreService.fetchAllTransactions(userId)
             if (cloudTxRes.isSuccess) {
                 val cloudItems = cloudTxRes.getOrNull() ?: emptyList()
@@ -207,7 +277,6 @@ class ContaMeRepository private constructor(
                 if (cloudBudget != null) {
                     database.budgetDao().insertOrUpdate(BudgetEntity.fromDomain(cloudBudget, userId))
                 } else {
-                    // Initialize default budget for this user if not yet in cloud
                     database.budgetDao().insertOrUpdate(
                         BudgetEntity(
                             id = "$userId-$currentMonthKey",
@@ -228,6 +297,9 @@ class ContaMeRepository private constructor(
         }
     }
 
+    /**
+     * Inserta datos iniciales de prueba en la base de datos local si el usuario ingresa por primera vez en modo invitado/local.
+     */
     suspend fun seedInitialDataIfEmpty() = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         val currentMonthKey = SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date(now))
@@ -244,7 +316,6 @@ class ContaMeRepository private constructor(
             )
         )
 
-        // Seed initial transactions for local/guest preview
         val sampleTransactions = listOf(
             TransactionItem(
                 id = UUID.randomUUID().toString(),
@@ -314,6 +385,9 @@ class ContaMeRepository private constructor(
         @Volatile
         private var INSTANCE: ContaMeRepository? = null
 
+        /**
+         * Retorna la instancia única (Singleton) de [ContaMeRepository].
+         */
         fun getInstance(context: Context): ContaMeRepository {
             return INSTANCE ?: synchronized(this) {
                 val db = Room.databaseBuilder(

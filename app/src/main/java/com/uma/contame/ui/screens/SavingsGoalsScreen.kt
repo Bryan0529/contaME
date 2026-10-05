@@ -43,6 +43,16 @@ import com.uma.contame.viewmodel.ContaMeUiState
 import java.text.NumberFormat
 import java.util.Locale
 
+/**
+ * Pantalla que muestra el listado completo de metas de ahorro del usuario y su avance global.
+ *
+ * @param state Estado global de la UI ([ContaMeUiState]).
+ * @param onAddGoal Callback para crear una nueva meta.
+ * @param onAddFunds Callback para abonar saldo a una meta específica.
+ * @param onEditGoal Callback para editar la configuración de una meta.
+ * @param onDeleteGoal Callback para eliminar una meta.
+ * @param modifier Modificador de Compose.
+ */
 @Composable
 fun SavingsGoalsScreen(
     state: ContaMeUiState,
@@ -52,7 +62,7 @@ fun SavingsGoalsScreen(
     onDeleteGoal: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("es", "US")) }
+    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-US")) }
 
     val totalSaved = remember(state.savingsGoals) {
         state.savingsGoals.sumOf { it.currentAmount }
@@ -70,7 +80,7 @@ fun SavingsGoalsScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Hero Card Summary
+        // Tarjeta resumen del objetivo de ahorro acumulado
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -191,7 +201,7 @@ fun SavingsGoalsScreen(
             }
         }
 
-        // Goals List
+        // Listado de tarjetas de metas
         if (state.savingsGoals.isEmpty()) {
             item {
                 Card(

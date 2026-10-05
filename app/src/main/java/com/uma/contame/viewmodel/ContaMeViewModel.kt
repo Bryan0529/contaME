@@ -9,11 +9,9 @@ import com.uma.contame.auth.AuthManager
 import com.uma.contame.auth.UserProfile
 import com.uma.contame.data.repository.ContaMeRepository
 import com.uma.contame.model.CategoryBreakdown
-import com.uma.contame.model.DefaultCategories
 import com.uma.contame.model.MonthlyBudget
 import com.uma.contame.model.MonthlyStat
 import com.uma.contame.model.SavingsGoal
-import com.uma.contame.model.TransactionCategory
 import com.uma.contame.model.TransactionItem
 import com.uma.contame.model.TransactionType
 import com.uma.contame.notification.NotificationHelper
@@ -22,13 +20,42 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Estado inmutable de la interfaz de usuario para la aplicación `contaME`.
+ *
+ * Reúne todas las variables reactivas necesarias para renderizar las pantallas sin
+ * realizar cálculos costosos dentro de los Composables.
+ *
+ * @property transactions Lista completa de transacciones del usuario.
+ * @property filteredTransactions Lista de transacciones filtradas por tipo, categoría o búsqueda.
+ * @property savingsGoals Lista de metas de ahorro del usuario.
+ * @property monthlyBudget Configuración del presupuesto mensual del mes activo.
+ * @property selectedMonthKey Clave del mes seleccionado en formato "yyyy-MM".
+ * @property selectedMonthLabel Etiqueta visible del mes (ej: "Septiembre 2026").
+ * @property currentBalance Balance histórico acumulado (Ingresos - Gastos).
+ * @property monthlyIncome Total de ingresos registrados en el mes actual.
+ * @property monthlyExpense Total de gastos registrados en el mes actual.
+ * @property budgetUsagePercent Porcentaje consumido del presupuesto mensual (de 0.0f a 1.0f).
+ * @property isBudgetExceeded Verdadero si los gastos del mes superaron el presupuesto.
+ * @property isBudgetWarning Verdadero si los gastos alcanzaron el umbral de alerta configurado.
+ * @property expenseCategoriesBreakdown Desglose porcentual de gastos por categoría para el gráfico de dona.
+ * @property incomeCategoriesBreakdown Desglose porcentual de ingresos por categoría para el gráfico de dona.
+ * @property monthlyComparison Histórico comparativo de Ingresos vs Gastos para el gráfico de barras.
+ * @property isCloudSyncing Indica si hay un proceso de sincronización con la nube en marcha.
+ * @property cloudSyncMessage Mensaje explicativo sobre el estado de la sincronización.
+ * @property activeFilter Filtro activo por tipo de movimiento (null = todos, Gasto o Ingreso).
+ * @property searchQuery Texto de búsqueda ingresado por el usuario.
+ * @property selectedCategoryFilter ID de la categoría seleccionada para filtrar.
+ * @property userProfile Perfil del usuario autenticado actual.
+ * @property isAuthLoading Indica si se está autenticando con Google/Firebase.
+ * @property authError Mensaje de error de autenticación en caso de falla.
+ */
 data class ContaMeUiState(
     val transactions: List<TransactionItem> = emptyList(),
     val filteredTransactions: List<TransactionItem> = emptyList(),
@@ -40,7 +67,7 @@ data class ContaMeUiState(
         notificationsEnabled = true
     ),
     val selectedMonthKey: String = SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date()),
-    val selectedMonthLabel: String = SimpleDateFormat("MMMM yyyy", Locale("es", "ES")).format(Date()).replaceFirstChar { it.uppercase() },
+    val selectedMonthLabel: String = SimpleDateFormat("MMMM yyyy", Locale.forLanguageTag("es-ES")).format(Date()).replaceFirstChar { it.uppercase() },
     val currentBalance: Double = 0.0,
     val monthlyIncome: Double = 0.0,
     val monthlyExpense: Double = 0.0,
@@ -52,7 +79,7 @@ data class ContaMeUiState(
     val monthlyComparison: List<MonthlyStat> = emptyList(),
     val isCloudSyncing: Boolean = false,
     val cloudSyncMessage: String? = null,
-    val activeFilter: TransactionType? = null, // null = all, or EXPENSE / INCOME
+    val activeFilter: TransactionType? = null,
     val searchQuery: String = "",
     val selectedCategoryFilter: String? = null,
     val userProfile: UserProfile? = null,
@@ -60,18 +87,35 @@ data class ContaMeUiState(
     val authError: String? = null
 )
 
+/**
+ * ViewModel principal de la aplicación `contaME`.
+ *
+ * Actúa como intermediario entre la capa de datos ([ContaMeRepository] y [AuthManager]) y la capa
+ * de presentación en Jetpack Compose ([ContaMeUiState]).
+ *
+ * Mantiene el estado en un [StateFlow] unificado que combina las consultas locales y remotas
+ * y reacciona automáticamente ante cambios en tiempo real.
+ *
+ * @param application Contexto de la aplicación Android.
+ */
 class ContaMeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = ContaMeRepository.getInstance(application)
     private val authManager = AuthManager.getInstance(application)
     private val currentMonthKey = SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date())
 
+    // Estados internos privados para los filtros de búsqueda e interfaz
     private val _activeFilter = MutableStateFlow<TransactionType?>(null)
     private val _searchQuery = MutableStateFlow("")
     private val _categoryFilter = MutableStateFlow<String?>(null)
     private val _cloudSyncing = MutableStateFlow(false)
     private val _cloudMessage = MutableStateFlow<String?>("Sincronizado con base de datos local y Firebase")
 
+    /**
+     * Estado público e inmutable expuesto a los Composables como [StateFlow].
+     *
+     * Se combina reactivamente a partir de 11 fuentes de información en tiempo real.
+     */
     val uiState: StateFlow<ContaMeUiState> = combine(
         repository.transactions,
         repository.savingsGoals,
@@ -119,7 +163,10 @@ class ContaMeViewModel(application: Application) : AndroidViewModel(application)
     )
 
     init {
+        // Inicializar canal de notificaciones en el sistema Android
         NotificationHelper.createNotificationChannel(application)
+
+        // Escuchar cambios de sesión y sincronizar con la cuenta activa
         viewModelScope.launch {
             authManager.currentUser.collect { user ->
                 repository.switchUser(user?.uid)
@@ -127,6 +174,10 @@ class ContaMeViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * Realiza todos los cálculos financieros (balances, promedios, porcentajes de consumo
+     * del presupuesto y desgloses de categorías) para construir una copia limpia de [ContaMeUiState].
+     */
     private fun calculateUiState(
         transactions: List<TransactionItem>,
         goals: List<SavingsGoal>,
@@ -142,11 +193,11 @@ class ContaMeViewModel(application: Application) : AndroidViewModel(application)
     ): ContaMeUiState {
         val now = Date()
         val monthKeyFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
-        val monthDisplayFormat = SimpleDateFormat("MMMM yyyy", Locale("es", "ES"))
+        val monthDisplayFormat = SimpleDateFormat("MMMM yyyy", Locale.forLanguageTag("es-ES"))
         val currentKey = monthKeyFormat.format(now)
         val monthLabel = monthDisplayFormat.format(now).replaceFirstChar { it.uppercase() }
 
-        // Filter current month transactions for budget & monthly calculation
+        // Filtrar transacciones del mes en curso para los cálculos presupuestarios
         val currentMonthTransactions = transactions.filter {
             monthKeyFormat.format(Date(it.timestamp)) == currentKey
         }
@@ -164,10 +215,10 @@ class ContaMeViewModel(application: Application) : AndroidViewModel(application)
         val isExceeded = totalExpense > budget.budgetLimit
         val isWarning = !isExceeded && (usagePercent >= (budget.alertThresholdPercent / 100f))
 
-        // Breakdown for expenses
+        // Desglose porcentual para gastos por categoría
         val expensesCurrentMonth = currentMonthTransactions.filter { it.type == TransactionType.EXPENSE }
         val expenseBreakdown = expensesCurrentMonth.groupBy { it.categoryId }
-            .map { (catId, items) ->
+            .map { (_, items) ->
                 val sum = items.sumOf { it.amount }
                 val first = items.first()
                 val pct = if (totalExpense > 0) (sum / totalExpense).toFloat() else 0f
@@ -180,10 +231,10 @@ class ContaMeViewModel(application: Application) : AndroidViewModel(application)
                 )
             }.sortedByDescending { it.totalAmount }
 
-        // Breakdown for income
+        // Desglose porcentual para ingresos por categoría
         val incomesCurrentMonth = currentMonthTransactions.filter { it.type == TransactionType.INCOME }
         val incomeBreakdown = incomesCurrentMonth.groupBy { it.categoryId }
-            .map { (catId, items) ->
+            .map { (_, items) ->
                 val sum = items.sumOf { it.amount }
                 val first = items.first()
                 val pct = if (totalIncome > 0) (sum / totalIncome).toFloat() else 0f
@@ -196,10 +247,10 @@ class ContaMeViewModel(application: Application) : AndroidViewModel(application)
                 )
             }.sortedByDescending { it.totalAmount }
 
-        // Monthly comparison (last 4 months)
+        // Comparativa histórica de los últimos 4 meses
         val monthlyComparison = buildMonthlyComparison(transactions)
 
-        // Filtered transaction list for display
+        // Aplicar filtros activos (búsqueda, tipo y categoría) sobre el historial de transacciones
         val filtered = transactions.filter { item ->
             val matchesType = (filter == null || item.type == filter)
             val matchesCategory = (catFilter == null || item.categoryId == catFilter)
@@ -237,18 +288,27 @@ class ContaMeViewModel(application: Application) : AndroidViewModel(application)
         )
     }
 
+    /**
+     * Inicia el proceso de autenticación con Google.
+     */
     fun signInWithGoogle(activity: Activity) {
         viewModelScope.launch {
             authManager.signInWithGoogle(activity)
         }
     }
 
+    /**
+     * Autentica con correo electrónico y contraseña en Firebase Auth.
+     */
     fun authenticateWithFirebaseEmail(email: String, pass: String, name: String) {
         viewModelScope.launch {
             authManager.authenticateWithFirebaseEmail(email, pass, name)
         }
     }
 
+    /**
+     * Cierra la sesión activa del usuario y cambia al modo local.
+     */
     fun signOut() {
         viewModelScope.launch {
             authManager.signOut()
@@ -256,11 +316,13 @@ class ContaMeViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * Construye la lista histórica de comparativa mensual de Ingresos vs Gastos para los últimos 4 meses.
+     */
     private fun buildMonthlyComparison(transactions: List<TransactionItem>): List<MonthlyStat> {
-        val calendar = Calendar.getInstance()
         val stats = mutableListOf<MonthlyStat>()
         val monthKeyFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
-        val shortMonthFormat = SimpleDateFormat("MMM", Locale("es", "ES"))
+        val shortMonthFormat = SimpleDateFormat("MMM", Locale.forLanguageTag("es-ES"))
 
         for (i in 3 downTo 0) {
             val cal = Calendar.getInstance().apply {
@@ -280,47 +342,70 @@ class ContaMeViewModel(application: Application) : AndroidViewModel(application)
         return stats
     }
 
+    /**
+     * Establece el filtro de tipo de movimiento (null = todos, EXPENSE o INCOME).
+     */
     fun setFilter(type: TransactionType?) {
         _activeFilter.value = type
     }
 
+    /**
+     * Establece la consulta de texto para buscar en las transacciones.
+     */
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
     }
 
+    /**
+     * Filtra las transacciones por una categoría específica.
+     */
     fun setCategoryFilter(categoryId: String?) {
         _categoryFilter.value = categoryId
     }
 
+    /**
+     * Registra un nuevo movimiento o actualiza uno existente, verificando el presupuesto para alertas.
+     */
     fun addOrUpdateTransaction(item: TransactionItem, context: Context) {
         viewModelScope.launch {
             repository.saveTransaction(item)
 
-            // If it's an expense, verify budget and trigger alert if necessary
             if (item.type == TransactionType.EXPENSE) {
                 checkAndDispatchBudgetAlert(context, item.categoryName)
             }
         }
     }
 
+    /**
+     * Elimina una transacción por su ID.
+     */
     fun deleteTransaction(id: String) {
         viewModelScope.launch {
             repository.deleteTransaction(id)
         }
     }
 
+    /**
+     * Registra o modifica una meta de ahorro.
+     */
     fun addOrUpdateGoal(goal: SavingsGoal) {
         viewModelScope.launch {
             repository.saveGoal(goal)
         }
     }
 
+    /**
+     * Elimina una meta de ahorro por su ID.
+     */
     fun deleteGoal(id: String) {
         viewModelScope.launch {
             repository.deleteGoal(id)
         }
     }
 
+    /**
+     * Añade fondos acumulados a una meta de ahorro y opcionalmente lo registra como gasto en el presupuesto.
+     */
     fun addFundsToGoal(
         goal: SavingsGoal,
         amount: Double,
@@ -349,6 +434,9 @@ class ContaMeViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * Actualiza el límite de presupuesto del mes, el porcentaje umbral de alerta y notificaciones.
+     */
     fun updateMonthlyBudget(
         limit: Double,
         thresholdPercent: Int,
@@ -364,6 +452,9 @@ class ContaMeViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * Fuerza la sincronización en segundo plano con la base de datos remota Firebase Firestore.
+     */
     fun syncWithCloud() {
         viewModelScope.launch {
             _cloudSyncing.value = true
@@ -378,6 +469,10 @@ class ContaMeViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * Verifica si los gastos actuales han superado el presupuesto mensual o el umbral de alerta,
+     * y emite la notificación push correspondiente mediante [NotificationHelper].
+     */
     private fun checkAndDispatchBudgetAlert(context: Context, categoryName: String) {
         val state = uiState.value
         val budget = state.monthlyBudget

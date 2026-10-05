@@ -71,6 +71,20 @@ import androidx.compose.material.icons.filled.ExitToApp
 import java.text.NumberFormat
 import java.util.Locale
 
+/**
+ * Pantalla para la gestión y configuración del presupuesto mensual y notificaciones de alerta.
+ *
+ * Permite ajustar el límite mensual, activar/desactivar notificaciones push, emitir notificaciones
+ * de prueba y administrar la sesión del usuario de Google.
+ *
+ * @param state Estado global de la UI ([ContaMeUiState]).
+ * @param onConfigureBudget Callback invocado para abrir el diálogo de configuración de presupuesto.
+ * @param onToggleNotifications Callback invocado para alternar las notificaciones.
+ * @param onSyncCloud Callback invocado para forzar la sincronización con la nube.
+ * @param onGoogleSignIn Callback invocado para iniciar sesión con Google.
+ * @param onSignOut Callback invocado para cerrar la sesión del usuario.
+ * @param modifier Modificador de Compose.
+ */
 @Composable
 fun BudgetScreen(
     state: ContaMeUiState,
@@ -82,9 +96,10 @@ fun BudgetScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("es", "US")) }
+    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-US")) }
     var testNotificationSent by remember { mutableStateOf(false) }
 
+    // Gestor de permisos para notificaciones en Android 13+
     val notificationLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -106,7 +121,7 @@ fun BudgetScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Screen Header
+        // Título de la pantalla
         item {
             Column {
                 Text(
@@ -123,7 +138,7 @@ fun BudgetScreen(
             }
         }
 
-        // Live Budget Card
+        // Tarjeta dinámica con el presupuesto
         item {
             BudgetCard(
                 budget = state.monthlyBudget,
@@ -134,7 +149,7 @@ fun BudgetScreen(
             )
         }
 
-        // Notification Controls Card
+        // Tarjeta de control de notificaciones y alertas
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -186,7 +201,7 @@ fun BudgetScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Test notification button
+                    // Botón para probar notificación de alerta
                     OutlinedButton(
                         onClick = {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -212,7 +227,7 @@ fun BudgetScreen(
                     if (testNotificationSent) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "✅ ¡Notificación emitida! Revisa tu barra de notificaciones de Android.",
+                            text = "¡Notificación emitida! Revisa tu barra de notificaciones de Android.",
                             style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFF10B981)
                         )
@@ -221,7 +236,7 @@ fun BudgetScreen(
             }
         }
 
-        // Google Account Card
+        // Tarjeta de estado de la cuenta de Google
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -234,7 +249,6 @@ fun BudgetScreen(
                         .padding(20.dp)
                 ) {
                     if (state.userProfile != null) {
-                        // User signed in
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
@@ -290,7 +304,6 @@ fun BudgetScreen(
                             }
                         }
                     } else {
-                        // User not signed in
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically

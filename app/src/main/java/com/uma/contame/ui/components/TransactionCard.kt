@@ -39,6 +39,17 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Tarjeta visual que muestra el detalle de un movimiento financiero (Gasto o Ingreso).
+ *
+ * Muestra el icono de la categoría, concepto, categoría, fecha, monto en color diferenciado
+ * y botones para editar y eliminar.
+ *
+ * @param item Datos de la transacción.
+ * @param onEditClick Callback invocado para editar el registro.
+ * @param onDeleteClick Callback invocado para eliminar el registro.
+ * @param modifier Modificador de Compose.
+ */
 @Composable
 fun TransactionCard(
     item: TransactionItem,
@@ -46,8 +57,8 @@ fun TransactionCard(
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("es", "US")) }
-    val dateFormat = remember { SimpleDateFormat("dd MMM, hh:mm a", Locale("es", "ES")) }
+    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-US")) }
+    val dateFormat = remember { SimpleDateFormat("dd MMM, hh:mm a", Locale.forLanguageTag("es-ES")) }
 
     val catColor = try {
         Color(android.graphics.Color.parseColor(item.categoryColor))
@@ -75,7 +86,7 @@ fun TransactionCard(
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Category Icon
+            // Icono de la categoría
             Box(
                 modifier = Modifier
                     .size(46.dp)
@@ -93,7 +104,7 @@ fun TransactionCard(
 
             Spacer(modifier = Modifier.width(14.dp))
 
-            // Details
+            // Detalles del movimiento
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.title,
@@ -132,7 +143,7 @@ fun TransactionCard(
                 }
             }
 
-            // Amount and actions
+            // Monto y acciones de edición/eliminación
             Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.Center

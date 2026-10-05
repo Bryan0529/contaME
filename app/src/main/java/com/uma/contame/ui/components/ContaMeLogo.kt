@@ -25,8 +25,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Official contaME Logo icon matching contaME_opcion1.png:
- * Dark rounded square icon, vivid green "C", and centered white dot.
+ * Icono de la marca oficial de `contaME`.
+ *
+ * Fondo cuadrado oscuro con bordes redondeados, arco "C" esmeralda brillante y punto blanco central.
+ *
+ * @param size Tamaño del icono.
+ * @param modifier Modificador de Compose.
  */
 @Composable
 fun ContaMeIcon(
@@ -48,7 +52,7 @@ fun ContaMeIcon(
             )
             val topLeft = Offset(strokeWidth / 2f, strokeWidth / 2f)
 
-            // Draw emerald green "C" arc
+            // Arco verde esmeralda con forma de "C"
             drawArc(
                 color = Color(0xFF10B981),
                 startAngle = 40f,
@@ -59,7 +63,7 @@ fun ContaMeIcon(
                 style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
             )
 
-            // Draw white circular dot on the right center opening of the C
+            // Punto circular blanco central
             val dotRadius = this.size.width * 0.16f
             val dotCenter = Offset(
                 x = this.size.width * 0.58f,
@@ -75,8 +79,13 @@ fun ContaMeIcon(
 }
 
 /**
- * Full official contaME Logo banner matching contaME_opcion1.png:
- * [Icon] + "conta" (bold) + "ME" (emerald green)
+ * Logotipo banner completo oficial de `contaME` que incluye el icono e isotipo estilizado.
+ *
+ * @param iconSize Tamaño del icono.
+ * @param fontSize Tamaño de la fuente del texto "contaME".
+ * @param showWordmark Si es verdadero, muestra el texto junto al icono.
+ * @param textColor Color del texto "conta".
+ * @param modifier Modificador de Compose.
  */
 @Composable
 fun ContaMeLogo(

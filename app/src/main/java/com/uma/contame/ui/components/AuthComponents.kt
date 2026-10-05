@@ -49,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
@@ -62,6 +63,11 @@ import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.uma.contame.auth.UserProfile
 
+/**
+ * Composable que dibuja mediante [Canvas] el logo oficial multicolor de Google.
+ *
+ * @param modifier Modificador para personalizar el tamaño o distribución del vector.
+ */
 @Composable
 fun GoogleLogoIcon(modifier: Modifier = Modifier.size(20.dp)) {
     Canvas(modifier = modifier) {
@@ -115,11 +121,19 @@ fun GoogleLogoIcon(modifier: Modifier = Modifier.size(20.dp)) {
         drawRect(
             color = blue,
             topLeft = Offset(w * 0.45f, h * 0.38f),
-            size = androidx.compose.ui.geometry.Size(w * 0.55f, h * 0.24f)
+            size = Size(w * 0.55f, h * 0.24f)
         )
     }
 }
 
+/**
+ * Botón estandarizado para iniciar sesión con Google.
+ *
+ * @param onClick Acción a ejecutar al hacer clic.
+ * @param isLoading Indica si hay un proceso de autenticación en curso para mostrar un spinner.
+ * @param text Texto visible del botón.
+ * @param modifier Modificador de Compose.
+ */
 @Composable
 fun GoogleSignInButton(
     onClick: () -> Unit,
@@ -168,6 +182,14 @@ fun GoogleSignInButton(
     }
 }
 
+/**
+ * Diálogo modal para visualizar el perfil del usuario autenticado y permitir cambiar de cuenta o cerrar sesión.
+ *
+ * @param user Datos del perfil del usuario.
+ * @param onSignOut Callback invocado al cerrar la sesión.
+ * @param onSwitchAccount Callback invocado al solicitar cambio de cuenta.
+ * @param onDismiss Callback para cerrar el diálogo.
+ */
 @Composable
 fun UserAccountDialog(
     user: UserProfile,
@@ -187,7 +209,7 @@ fun UserAccountDialog(
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Avatar
+                // Avatar del usuario
                 Box(
                     modifier = Modifier
                         .size(80.dp)
@@ -233,7 +255,6 @@ fun UserAccountDialog(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Action buttons: Cambiar de cuenta + Salir + Cerrar
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -293,6 +314,9 @@ fun UserAccountDialog(
     }
 }
 
+/**
+ * Diálogo modal para solicitar inicio de sesión con Google.
+ */
 @Composable
 fun SignInPromptDialog(
     isLoading: Boolean,
@@ -340,7 +364,6 @@ fun SignInPromptDialog(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Solo el botón oficial "Continuar con Google"
                 GoogleSignInButton(
                     onClick = onGoogleSignInClick,
                     isLoading = isLoading,

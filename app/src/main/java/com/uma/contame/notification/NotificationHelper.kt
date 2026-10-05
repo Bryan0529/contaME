@@ -16,6 +16,12 @@ import com.uma.contame.R
 import java.text.NumberFormat
 import java.util.Locale
 
+/**
+ * Helper centralizado para crear y emitir notificaciones del sistema en Android.
+ *
+ * Se encarga de la creación del canal de notificaciones (NotificationChannel) y del envío de alertas
+ * cuando el usuario se aproxima o supera el presupuesto mensual establecido.
+ */
 object NotificationHelper {
 
     private const val CHANNEL_ID = "contame_budget_channel"
@@ -25,6 +31,11 @@ object NotificationHelper {
     private const val NOTIFICATION_ID_WARNING = 1001
     private const val NOTIFICATION_ID_EXCEEDED = 1002
 
+    /**
+     * Crea el canal de notificaciones en dispositivos con Android 8.0 (API level 26) o superior.
+     *
+     * @param context Contexto de la aplicación.
+     */
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val importance = NotificationManager.IMPORTANCE_HIGH
@@ -37,12 +48,21 @@ object NotificationHelper {
         }
     }
 
+    /**
+     * Emite una notificación de advertencia de presupuesto superado.
+     *
+     * @param context Contexto de la aplicación.
+     * @param totalExpenses Suma total de gastos realizados en el mes.
+     * @param budgetLimit Límite de presupuesto mensual fijado.
+     * @param topCategory Nombre de la categoría que registra el mayor gasto.
+     */
     fun sendBudgetExceededNotification(
         context: Context,
         totalExpenses: Double,
         budgetLimit: Double,
         topCategory: String = "Gastos Generales"
     ) {
+        // Verificar permiso de notificaciones en Android 13+ (POST_NOTIFICATIONS)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ActivityCompat.checkSelfPermission(
                     context,
@@ -53,11 +73,12 @@ object NotificationHelper {
             }
         }
 
-        val currencyFormat = NumberFormat.getCurrencyInstance(Locale("es", "US"))
+        val currencyFormat = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-US"))
         val expenseStr = currencyFormat.format(totalExpenses)
         val budgetStr = currencyFormat.format(budgetLimit)
         val diffStr = currencyFormat.format(totalExpenses - budgetLimit)
 
+        // Intent para abrir MainActivity al presionar la notificación
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
@@ -70,7 +91,7 @@ object NotificationHelper {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("🚨 ¡Presupuesto mensual superado en contaME!")
+            .setContentTitle("¡Presupuesto mensual superado en contaME!")
             .setContentText("Has gastado $expenseStr de tu límite de $budgetStr ($diffStr de sobregiro).")
             .setStyle(
                 NotificationCompat.BigTextStyle()
@@ -91,6 +112,14 @@ object NotificationHelper {
         NotificationManagerCompat.from(context).notify(NOTIFICATION_ID_EXCEEDED, notification)
     }
 
+    /**
+     * Emite una notificación de advertencia preventiva cuando el usuario alcanza el porcentaje umbral del presupuesto.
+     *
+     * @param context Contexto de la aplicación.
+     * @param percentage Porcentaje alcanzado del presupuesto (ej: 80%).
+     * @param totalExpenses Suma total de gastos realizados.
+     * @param budgetLimit Límite de presupuesto configurado.
+     */
     fun sendBudgetWarningNotification(
         context: Context,
         percentage: Int,
@@ -107,7 +136,7 @@ object NotificationHelper {
             }
         }
 
-        val currencyFormat = NumberFormat.getCurrencyInstance(Locale("es", "US"))
+        val currencyFormat = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-US"))
         val expenseStr = currencyFormat.format(totalExpenses)
         val budgetStr = currencyFormat.format(budgetLimit)
 

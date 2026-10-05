@@ -49,6 +49,15 @@ import com.uma.contame.model.MonthlyStat
 import java.text.NumberFormat
 import java.util.Locale
 
+/**
+ * Composable que renderiza un gráfico de dona animado utilizando [Canvas] para mostrar
+ * la distribución porcentual de gastos o ingresos por categoría.
+ *
+ * @param breakdown Lista con el desglose por categorías.
+ * @param totalAmount Monto total financiero representado.
+ * @param title Título del gráfico.
+ * @param modifier Modificador de Compose.
+ */
 @Composable
 fun ContaMeDonutChart(
     breakdown: List<CategoryBreakdown>,
@@ -58,8 +67,9 @@ fun ContaMeDonutChart(
 ) {
     val animationProgress = remember { Animatable(0f) }
     var selectedCategory by remember { mutableStateOf<CategoryBreakdown?>(null) }
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("es", "US")) }
+    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-US")) }
 
+    // Animación de llenado progresivo del gráfico de dona al aparecer
     LaunchedEffect(breakdown) {
         animationProgress.snapTo(0f)
         animationProgress.animateTo(
@@ -119,7 +129,7 @@ fun ContaMeDonutChart(
                         val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
                         var startAngle = -90f
 
-                        // Background track
+                        // Pista de fondo gris
                         drawArc(
                             color = Color(0x1F94A3B8),
                             startAngle = 0f,
@@ -130,6 +140,7 @@ fun ContaMeDonutChart(
                             style = Stroke(width = strokeWidth)
                         )
 
+                        // Arcos interactivos por categoría
                         breakdown.forEach { item ->
                             val sweep = (item.percentage * 360f) * animationProgress.value
                             val color = try {
@@ -142,7 +153,7 @@ fun ContaMeDonutChart(
                                 drawArc(
                                     color = color,
                                     startAngle = startAngle,
-                                    sweepAngle = sweep - 1.5f, // slight gap between segments
+                                    sweepAngle = sweep - 1.5f,
                                     useCenter = false,
                                     topLeft = topLeft,
                                     size = Size(arcSize, arcSize),
@@ -153,7 +164,7 @@ fun ContaMeDonutChart(
                         }
                     }
 
-                    // Center label inside donut hole
+                    // Etiqueta central con el monto total o categoría seleccionada
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.padding(16.dp)
@@ -183,7 +194,7 @@ fun ContaMeDonutChart(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Category Chips Legend
+                // Leyenda de categorías
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -253,12 +264,18 @@ fun ContaMeDonutChart(
     }
 }
 
+/**
+ * Composable de gráfico de barras comparativo para evaluar Ingresos vs. Gastos en el tiempo.
+ *
+ * @param stats Lista de objetos [MonthlyStat] con datos agregados por mes.
+ * @param modifier Modificador de Compose.
+ */
 @Composable
 fun ContaMeMonthlyBarChart(
     stats: List<MonthlyStat>,
     modifier: Modifier = Modifier
 ) {
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("es", "US")) }
+    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-US")) }
     val maxVal = remember(stats) {
         val highest = stats.maxOfOrNull { maxOf(it.income, it.expense) } ?: 1000.0
         if (highest <= 0.0) 1000.0 else highest * 1.15
@@ -289,7 +306,7 @@ fun ContaMeMonthlyBarChart(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                // Legend
+                // Leyenda de colores
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
@@ -353,7 +370,7 @@ fun ContaMeMonthlyBarChart(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                                 modifier = Modifier.height(120.dp)
                             ) {
-                                // Income bar
+                                // Barra de Ingreso
                                 val incomeRatio = (stat.income / maxVal).toFloat().coerceIn(0.02f, 1f)
                                 Box(
                                     modifier = Modifier
@@ -363,7 +380,7 @@ fun ContaMeMonthlyBarChart(
                                         .background(Color(0xFF10B981))
                                 )
 
-                                // Expense bar
+                                // Barra de Gasto
                                 val expenseRatio = (stat.expense / maxVal).toFloat().coerceIn(0.02f, 1f)
                                 Box(
                                     modifier = Modifier

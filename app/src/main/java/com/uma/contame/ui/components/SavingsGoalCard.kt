@@ -44,6 +44,18 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Componente visual que representa una tarjeta con los detalles de una meta de ahorro.
+ *
+ * Muestra el título, la barra de progreso, el porcentaje acumulado, y acciones para aportar fondos,
+ * editar o eliminar la meta.
+ *
+ * @param goal Datos de la meta de ahorro.
+ * @param onAddFundsClick Callback invocado para aportar fondos.
+ * @param onEditClick Callback invocado para editar la meta.
+ * @param onDeleteClick Callback invocado para eliminar la meta.
+ * @param modifier Modificador de Compose.
+ */
 @Composable
 fun SavingsGoalCard(
     goal: SavingsGoal,
@@ -52,8 +64,8 @@ fun SavingsGoalCard(
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("es", "US")) }
-    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale("es", "ES")) }
+    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-US")) }
+    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.forLanguageTag("es-ES")) }
     val goalColor = try {
         Color(android.graphics.Color.parseColor(goal.colorHex))
     } catch (e: Exception) {
@@ -146,7 +158,7 @@ fun SavingsGoalCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Completed badge if reached
+            // Medalla de felicitación al completar la meta
             if (goal.isCompleted) {
                 Surface(
                     color = Color(0xFFD1FAE5),
@@ -175,7 +187,7 @@ fun SavingsGoalCard(
                 Spacer(modifier = Modifier.height(10.dp))
             }
 
-            // Progress bar
+            // Barra de progreso
             LinearProgressIndicator(
                 progress = { goal.progress },
                 modifier = Modifier

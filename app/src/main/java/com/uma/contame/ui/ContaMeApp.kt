@@ -2,7 +2,6 @@ package com.uma.contame.ui
 
 import android.Manifest
 import android.app.Activity
-import android.content.Context
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -90,14 +89,34 @@ import com.uma.contame.ui.screens.SavingsGoalsScreen
 import com.uma.contame.ui.screens.TransactionsScreen
 import com.uma.contame.viewmodel.ContaMeViewModel
 
+/**
+ * Enumeración con las pestañas de navegación principal de la aplicación.
+ *
+ * @property label Texto mostrado en la barra inferior.
+ * @property icon Icono de Material Icons asignado a la pestaña.
+ */
 enum class AppTab(val label: String, val icon: ImageVector) {
+    /** Pantalla principal con resumen general de finanzas. */
     DASHBOARD("Resumen", Icons.Default.Home),
+    /** Pantalla con el listado detallado de movimientos e historial. */
     TRANSACTIONS("Movimientos", Icons.Default.ReceiptLong),
+    /** Pantalla con gráficos estadísticos de gastos e ingresos. */
     CHARTS("Gráficos", Icons.Default.BarChart),
+    /** Pantalla para la gestión de metas de ahorro. */
     GOALS("Metas", Icons.Default.Savings),
+    /** Pantalla para la configuración del presupuesto mensual. */
     BUDGET("Presupuesto", Icons.Default.Tune)
 }
 
+/**
+ * Composable contenedor principal de la interfaz de usuario de `contaME`.
+ *
+ * Administra el Scaffold con la barra superior (TopAppBar), la barra de navegación inferior (NavigationBar),
+ * los diálogos modales (creación/edición de movimientos, metas y presupuesto) y el enrutamiento
+ * mediante animaciones entre pestañas.
+ *
+ * @param viewModel ViewModel principal de la aplicación.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContaMeApp(
@@ -108,7 +127,7 @@ fun ContaMeApp(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var currentTab by remember { mutableStateOf(AppTab.DASHBOARD) }
 
-    // Dialog states
+    // Estados de diálogo modal
     var showTxDialog by remember { mutableStateOf(false) }
     var editingTxItem by remember { mutableStateOf<TransactionItem?>(null) }
     var presetTxType by remember { mutableStateOf<TransactionType?>(null) }
@@ -125,12 +144,12 @@ fun ContaMeApp(
     var txToDelete by remember { mutableStateOf<String?>(null) }
     var goalToDelete by remember { mutableStateOf<String?>(null) }
 
-    // Handle back button: if not on DASHBOARD, return to DASHBOARD
+    // Retornar a la pestaña DASHBOARD al presionar el botón de atrás si está en otra sección
     BackHandler(enabled = currentTab != AppTab.DASHBOARD) {
         currentTab = AppTab.DASHBOARD
     }
 
-    // Permission request for Android 13+ notifications
+    // Petición de permisos para notificaciones en Android 13+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { _ -> }
@@ -141,7 +160,7 @@ fun ContaMeApp(
         }
     }
 
-    // Si no ha iniciado sesión, mostrar la pantalla de Login con el botón de Google
+    // Si no hay sesión iniciada, presenta la pantalla de Login con Google
     if (uiState.userProfile == null) {
         LoginScreen(
             isLoading = uiState.isAuthLoading,
@@ -183,7 +202,7 @@ fun ContaMeApp(
                                 )
                             }
                             Text(
-                                text = "Gastos, Ingresos y Ahorro",
+                                text = "Control de Gastos, Ingresos y Ahorro",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -191,6 +210,7 @@ fun ContaMeApp(
                     }
                 },
                 actions = {
+                    // Badge de estado de alerta o exceso de presupuesto
                     if (uiState.isBudgetExceeded || uiState.isBudgetWarning) {
                         Surface(
                             shape = CircleShape,
@@ -218,7 +238,7 @@ fun ContaMeApp(
                         }
                     }
 
-                    // Google Account avatar with proprietor tooltip/click
+                    // Avatar de usuario autenticado
                     val profile = uiState.userProfile!!
                     Box(
                         modifier = Modifier
@@ -418,7 +438,7 @@ fun ContaMeApp(
         }
     }
 
-    // Account Dialog
+    // Diálogo de opciones de la cuenta de usuario
     if (showAccountDialog && uiState.userProfile != null) {
         UserAccountDialog(
             user = uiState.userProfile!!,
@@ -434,7 +454,7 @@ fun ContaMeApp(
         )
     }
 
-    // Modal Dialogs
+    // Diálogo modal para agregar/modificar movimiento
     if (showTxDialog) {
         val initialWithPreset = editingTxItem ?: presetTxType?.let {
             TransactionItem(
@@ -464,6 +484,7 @@ fun ContaMeApp(
         )
     }
 
+    // Diálogo modal para agregar/modificar meta de ahorro
     if (showGoalDialog) {
         AddEditGoalDialog(
             initialGoal = editingGoalItem,
@@ -479,6 +500,7 @@ fun ContaMeApp(
         )
     }
 
+    // Diálogo modal para aportar fondos a una meta de ahorro
     if (showDepositDialog && depositingGoal != null) {
         DepositGoalDialog(
             goal = depositingGoal!!,
@@ -494,6 +516,7 @@ fun ContaMeApp(
         )
     }
 
+    // Diálogo modal para configurar presupuesto
     if (showBudgetDialog) {
         SetBudgetDialog(
             currentBudget = uiState.monthlyBudget,
@@ -505,7 +528,7 @@ fun ContaMeApp(
         )
     }
 
-    // Delete Transaction confirmation dialog
+    // Diálogo de confirmación para eliminar movimiento
     if (txToDelete != null) {
         AlertDialog(
             onDismissRequest = { txToDelete = null },
@@ -530,7 +553,7 @@ fun ContaMeApp(
         )
     }
 
-    // Delete Goal confirmation dialog
+    // Diálogo de confirmación para eliminar meta de ahorro
     if (goalToDelete != null) {
         AlertDialog(
             onDismissRequest = { goalToDelete = null },

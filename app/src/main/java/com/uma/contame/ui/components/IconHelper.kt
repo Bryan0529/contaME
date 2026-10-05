@@ -24,7 +24,16 @@ import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.ui.graphics.vector.ImageVector
 
+/**
+ * Mapeador auxiliar que convierte nombres de iconos en formato de cadena a vectores de [ImageVector].
+ */
 object IconHelper {
+    /**
+     * Mapea una cadena de texto representando un icono a su respectivo [ImageVector] de Material Icons.
+     *
+     * @param iconName Nombre identificador del icono.
+     * @return Instancia de [ImageVector] de Material Icons.
+     */
     fun getIconByName(iconName: String): ImageVector {
         return when (iconName) {
             "restaurant" -> Icons.Default.Restaurant

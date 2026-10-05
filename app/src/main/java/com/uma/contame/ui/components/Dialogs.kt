@@ -59,6 +59,13 @@ import com.uma.contame.model.TransactionCategory
 import com.uma.contame.model.TransactionItem
 import com.uma.contame.model.TransactionType
 
+/**
+ * Diálogo modal para registrar un nuevo movimiento (gasto o ingreso) o editar uno existente.
+ *
+ * @param initialItem Transacción inicial si se está editando, o null para un nuevo registro.
+ * @param onDismiss Callback invocado al cancelar o cerrar el diálogo.
+ * @param onSave Callback invocado al guardar los cambios en la transacción.
+ */
 @Composable
 fun AddEditTransactionDialog(
     initialItem: TransactionItem? = null,
@@ -120,7 +127,7 @@ fun AddEditTransactionDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Type Toggle: Gasto vs Ingreso
+                // Selector de tipo de movimiento (Gasto vs Ingreso)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -170,7 +177,7 @@ fun AddEditTransactionDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Title Input
+                // Título / Concepto
                 OutlinedTextField(
                     value = title,
                     onValueChange = {
@@ -188,7 +195,7 @@ fun AddEditTransactionDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Amount Input
+                // Monto monetario
                 OutlinedTextField(
                     value = amountStr,
                     onValueChange = {
@@ -207,7 +214,7 @@ fun AddEditTransactionDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Category selector
+                // Selector de categoría
                 Text(
                     text = "Seleccionar Categoría:",
                     style = MaterialTheme.typography.labelLarge,
@@ -252,7 +259,7 @@ fun AddEditTransactionDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Notes input
+                // Notas opcionales
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
@@ -329,6 +336,9 @@ fun AddEditTransactionDialog(
     }
 }
 
+/**
+ * Diálogo modal para la creación o modificación de una meta de ahorro.
+ */
 @Composable
 fun AddEditGoalDialog(
     initialGoal: SavingsGoal? = null,
@@ -537,6 +547,9 @@ fun AddEditGoalDialog(
     }
 }
 
+/**
+ * Diálogo modal para realizar un aporte de dinero a una meta de ahorro activa.
+ */
 @Composable
 fun DepositGoalDialog(
     goal: SavingsGoal,
@@ -650,6 +663,9 @@ fun DepositGoalDialog(
     }
 }
 
+/**
+ * Diálogo modal para configurar el presupuesto mensual y el umbral de alerta.
+ */
 @Composable
 fun SetBudgetDialog(
     currentBudget: MonthlyBudget,

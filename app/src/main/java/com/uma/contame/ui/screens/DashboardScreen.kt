@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,6 +58,26 @@ import com.uma.contame.viewmodel.ContaMeUiState
 import java.text.NumberFormat
 import java.util.Locale
 
+/**
+ * Pantalla principal (Dashboard / Resumen) de la aplicación `contaME`.
+ *
+ * Muestra la tarjeta con el balance total, desglose de ingresos/gastos del mes, botones de acceso
+ * rápido para registrar transacciones o metas, el estado del presupuesto y un resumen de las
+ * metas y transacciones recientes.
+ *
+ * @param state Estado global de la UI ([ContaMeUiState]).
+ * @param onAddTransaction Callback para abrir el diálogo de nueva transacción.
+ * @param onAddGoal Callback para abrir el diálogo de nueva meta.
+ * @param onEditTransaction Callback para editar una transacción.
+ * @param onDeleteTransaction Callback para eliminar una transacción.
+ * @param onAddFundsGoal Callback para aportar fondos a una meta.
+ * @param onEditGoal Callback para editar una meta.
+ * @param onDeleteGoal Callback para eliminar una meta.
+ * @param onConfigureBudget Callback para abrir la configuración del presupuesto.
+ * @param onViewAllTransactions Callback para ir a la pestaña de movimientos.
+ * @param onViewAllGoals Callback para ir a la pestaña de metas de ahorro.
+ * @param modifier Modificador de Compose.
+ */
 @Composable
 fun DashboardScreen(
     state: ContaMeUiState,
@@ -74,7 +93,7 @@ fun DashboardScreen(
     onViewAllGoals: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("es", "US")) }
+    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-US")) }
 
     LazyColumn(
         modifier = modifier
@@ -83,7 +102,7 @@ fun DashboardScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // App header & Balance Card
+        // Tarjeta Hero: Balance Total e Ingresos vs Gastos
         item {
             Card(
                 modifier = Modifier
@@ -145,12 +164,12 @@ fun DashboardScreen(
 
                         Spacer(modifier = Modifier.height(18.dp))
 
-                        // Income and Expense columns
+                        // Columnas de Ingresos y Gastos
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            // Incomes
+                            // Ingresos
                             Surface(
                                 modifier = Modifier.weight(1f),
                                 color = Color(0x1F10B981),
@@ -191,7 +210,7 @@ fun DashboardScreen(
                                 }
                             }
 
-                            // Expenses
+                            // Gastos
                             Surface(
                                 modifier = Modifier.weight(1f),
                                 color = Color(0x1FEF4444),
@@ -237,7 +256,7 @@ fun DashboardScreen(
             }
         }
 
-        // Quick Actions Row (Gasto, Ingreso, Meta)
+        // Acciones Rápidas (Gasto, Ingreso, Meta)
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -392,7 +411,7 @@ fun DashboardScreen(
             }
         }
 
-        // Monthly Budget Card
+        // Tarjeta de Presupuesto Mensual
         item {
             BudgetCard(
                 budget = state.monthlyBudget,
@@ -403,7 +422,7 @@ fun DashboardScreen(
             )
         }
 
-        // Active Goals Section
+        // Sección de Metas de Ahorro
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -449,7 +468,6 @@ fun DashboardScreen(
                 }
             }
         } else {
-            // Show first 2 goals on dashboard
             items(state.savingsGoals.take(2)) { goal ->
                 SavingsGoalCard(
                     goal = goal,
@@ -460,7 +478,7 @@ fun DashboardScreen(
             }
         }
 
-        // Recent Transactions Section
+        // Sección de Movimientos Recientes
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),

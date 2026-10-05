@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Security
@@ -45,6 +44,16 @@ import androidx.compose.ui.unit.sp
 import com.uma.contame.ui.components.ContaMeIcon
 import com.uma.contame.ui.components.GoogleSignInButton
 
+/**
+ * Pantalla de inicio de sesión de la aplicación.
+ *
+ * Muestra el logotipo de `contaME`, aspectos destacados del producto (seguridad, sincronización en la nube),
+ * y el botón oficial de "Iniciar Sesión con Google".
+ *
+ * @param isLoading Indica si hay un proceso de autenticación en curso.
+ * @param errorMessage Mensaje de error de autenticación si ocurre alguna falla.
+ * @param onGoogleSignInClick Callback invocado al presionar el botón de inicio de sesión con Google.
+ */
 @Composable
 fun LoginScreen(
     isLoading: Boolean,
@@ -57,7 +66,7 @@ fun LoginScreen(
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF0F172A), // Dark slate
+                        Color(0xFF0F172A),
                         Color(0xFF090D16),
                         Color(0xFF05080E)
                     )
@@ -76,11 +85,10 @@ fun LoginScreen(
         ) {
             Spacer(modifier = Modifier.height(24.dp))
 
-            // App Brand Header
+            // Encabezado con el logotipo oficial
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Official contaME icon
                 ContaMeIcon(size = 84.dp)
 
                 Spacer(modifier = Modifier.height(18.dp))
@@ -114,7 +122,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Feature Highlights
+            // Tarjeta de características destacadas
             Card(
                 shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(
@@ -134,7 +142,7 @@ fun LoginScreen(
                     LoginFeatureItem(
                         icon = Icons.Default.CloudDone,
                         title = "Sincronización en la Nube",
-                        description = "Accede a tus datos en tiempo real desde cualquier dispositivo con Firebase."
+                        description = "Accede a tus datos en tiempo real desde cualquier dispositivo."
                     )
                     LoginFeatureItem(
                         icon = Icons.Default.TrendingUp,
@@ -146,7 +154,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Action section: Solo botón "Iniciar Sesión con Google"
+            // Botón de autenticación con Google
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -169,7 +177,6 @@ fun LoginScreen(
                     }
                 }
 
-                // Official Google Sign-In Button with exact text requested
                 GoogleSignInButton(
                     onClick = onGoogleSignInClick,
                     isLoading = isLoading,
@@ -204,6 +211,9 @@ fun LoginScreen(
     }
 }
 
+/**
+ * Componente interno que renderiza una fila descriptiva de característica en la pantalla de Login.
+ */
 @Composable
 private fun LoginFeatureItem(
     icon: ImageVector,

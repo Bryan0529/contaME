@@ -48,13 +48,20 @@ import com.uma.contame.viewmodel.ContaMeUiState
 import java.text.NumberFormat
 import java.util.Locale
 
+/**
+ * Pantalla que presenta estadísticas financieras, gráficos de dona interactivos por categoría,
+ * gráficos de barras para comparar Ingresos vs. Gastos y métricas clave (KPIs).
+ *
+ * @param state Estado global de la UI ([ContaMeUiState]).
+ * @param modifier Modificador de Compose.
+ */
 @Composable
 fun ChartsScreen(
     state: ContaMeUiState,
     modifier: Modifier = Modifier
 ) {
     var chartType by remember { mutableStateOf(TransactionType.EXPENSE) }
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("es", "US")) }
+    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-US")) }
 
     val activeBreakdown = if (chartType == TransactionType.EXPENSE) {
         state.expenseCategoriesBreakdown
@@ -68,7 +75,7 @@ fun ChartsScreen(
         state.monthlyIncome
     }
 
-    // Savings rate calculation
+    // Cálculo del porcentaje/tasa de ahorro
     val savingsRate = remember(state.monthlyIncome, state.monthlyExpense) {
         if (state.monthlyIncome > 0) {
             val saved = state.monthlyIncome - state.monthlyExpense
@@ -83,7 +90,7 @@ fun ChartsScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header title
+        // Título de la sección
         item {
             Column {
                 Text(
@@ -100,7 +107,7 @@ fun ChartsScreen(
             }
         }
 
-        // Toggle: Gastos vs Ingresos
+        // Selector: Gastos por Categoría vs Ingresos por Categoría
         item {
             Row(
                 modifier = Modifier
@@ -146,7 +153,7 @@ fun ChartsScreen(
             }
         }
 
-        // Donut Chart with interactive legend
+        // Gráfico de Dona
         item {
             ContaMeDonutChart(
                 breakdown = activeBreakdown,
@@ -155,14 +162,14 @@ fun ChartsScreen(
             )
         }
 
-        // Monthly Comparison Bar Chart
+        // Gráfico de Barras
         item {
             ContaMeMonthlyBarChart(
                 stats = state.monthlyComparison
             )
         }
 
-        // Financial KPIs Cards
+        // Tarjetas de Métricas e Indicadores
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -212,7 +219,7 @@ fun ChartsScreen(
                     }
                 }
 
-                // Mayor categoría
+                // Categoría de mayor gasto
                 val topExpense = state.expenseCategoriesBreakdown.firstOrNull()
                 Card(
                     modifier = Modifier.weight(1f),

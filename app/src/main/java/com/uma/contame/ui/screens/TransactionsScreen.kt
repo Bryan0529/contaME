@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -51,6 +50,20 @@ import com.uma.contame.viewmodel.ContaMeUiState
 import java.text.NumberFormat
 import java.util.Locale
 
+/**
+ * Pantalla para explorar el historial completo de movimientos financieros (transacciones).
+ *
+ * Ofrece campo de búsqueda en tiempo real por texto/concepto, filtro por tipo (Gastos, Ingresos o Todos)
+ * y filtros por chips de categorías.
+ *
+ * @param state Estado global de la UI ([ContaMeUiState]).
+ * @param onFilterChange Callback al cambiar el tipo de filtro (Gasto/Ingreso).
+ * @param onSearchChange Callback al ingresar texto en la barra de búsqueda.
+ * @param onCategoryFilterChange Callback al seleccionar un chip de categoría.
+ * @param onEditTransaction Callback para editar una transacción.
+ * @param onDeleteTransaction Callback para eliminar una transacción.
+ * @param modifier Modificador de Compose.
+ */
 @Composable
 fun TransactionsScreen(
     state: ContaMeUiState,
@@ -61,7 +74,7 @@ fun TransactionsScreen(
     onDeleteTransaction: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("es", "US")) }
+    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-US")) }
     val allCategories = remember { DefaultCategories.expenseCategories + DefaultCategories.incomeCategories }
 
     val filteredSum = remember(state.filteredTransactions) {
@@ -77,7 +90,7 @@ fun TransactionsScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Search bar
+        // Barra de Búsqueda
         item {
             OutlinedTextField(
                 value = state.searchQuery,
@@ -101,7 +114,7 @@ fun TransactionsScreen(
             )
         }
 
-        // Type Segment Filter
+        // Filtro por Segmento (Todos / Gastos / Ingresos)
         item {
             Row(
                 modifier = Modifier
@@ -144,7 +157,7 @@ fun TransactionsScreen(
             }
         }
 
-        // Category Chips Filter
+        // Filtro por chips de Categoría
         item {
             Column {
                 Text(
@@ -184,7 +197,7 @@ fun TransactionsScreen(
             }
         }
 
-        // Summary of filtered items
+        // Resumen contador del resultado filtrado
         item {
             Surface(
                 color = MaterialTheme.colorScheme.surface,
@@ -225,7 +238,7 @@ fun TransactionsScreen(
             }
         }
 
-        // Transactions list
+        // Lista de transacciones filtradas
         if (state.filteredTransactions.isEmpty()) {
             item {
                 Card(

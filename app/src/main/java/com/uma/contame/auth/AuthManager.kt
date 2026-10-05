@@ -8,7 +8,6 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
-import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -22,6 +21,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.tasks.await
 import java.lang.Exception
 
+/**
+ * Modelo de datos que representa el perfil de un usuario autenticado en la aplicación.
+ *
+ * @property uid Identificador único del usuario asignado por el proveedor de autenticación.
+ * @property displayName Nombre visible del usuario (puede ser nulo si no está configurado).
+ * @property email Correo electrónico asociado a la cuenta del usuario.
+ * @property photoUrl URL de la foto de perfil del usuario.
+ * @property isAnonymous Indica si la cuenta del usuario es anónima.
+ */
 data class UserProfile(
     val uid: String,
     val displayName: String?,
@@ -30,11 +38,23 @@ data class UserProfile(
     val isAnonymous: Boolean = false
 )
 
+/**
+ * Administrador centralizado de autenticación para la aplicación `contaME`.
+ *
+ * Implementa el patrón Singleton para garantizar una única instancia activa en toda la app.
+ * Gestiona el inicio y cierre de sesión utilizando **Firebase Authentication** y la API de
+ * **Android Credential Manager** con Google Identity Services.
+ *
+ * @param context Contexto de la aplicación para inicializar servicios como [CredentialManager].
+ */
 class AuthManager private constructor(private val context: Context) {
 
     private val tag = "ContaMeAuth"
+
+    // Gestor de credenciales nativo de Android para la integración de Google Sign-In
     private val credentialManager = CredentialManager.create(context)
 
+    // Instancia de Firebase Auth inicializada de forma perezosa y segura
     private val firebaseAuth: FirebaseAuth? by lazy {
         try {
             FirebaseAuth.getInstance()
@@ -44,24 +64,36 @@ class AuthManager private constructor(private val context: Context) {
         }
     }
 
+    // Flujos de estado reactivos (StateFlow) para exponer información a la UI
     private val _currentUser = MutableStateFlow<UserProfile?>(null)
+    /** Estado reactivo que emite el perfil del usuario actualmente autenticado (o null si no hay sesión activa). */
     val currentUser: StateFlow<UserProfile?> = _currentUser.asStateFlow()
 
     private val _authError = MutableStateFlow<String?>(null)
+    /** Estado reactivo que contiene mensajes de error recientes de autenticación para mostrar en la interfaz. */
     val authError: StateFlow<String?> = _authError.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
+    /** Estado reactivo que indica si hay un proceso de autenticación en curso. */
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     init {
+        // Escucha cambios en el estado de autenticación de Firebase en tiempo real
         firebaseAuth?.addAuthStateListener { auth ->
             val user = auth.currentUser
             _currentUser.value = user?.toUserProfile()
             Log.d(tag, "AuthStateListener: user = ${user?.email}")
         }
+        // Inicializa el usuario actual con la sesión previamente guardada en Firebase Auth
         _currentUser.value = firebaseAuth?.currentUser?.toUserProfile()
     }
 
+    /**
+     * Inicia sesión utilizando la cuenta de Google mediante [CredentialManager] y autentica en Firebase.
+     *
+     * @param activity Actividad desde la cual se invoca el flujo visual de selección de cuenta de Google.
+     * @return [Result] con el [UserProfile] resultante si el proceso es exitoso, o una excepción si falla.
+     */
     suspend fun signInWithGoogle(activity: Activity): Result<UserProfile> {
         _isLoading.value = true
         _authError.value = null
@@ -69,29 +101,33 @@ class AuthManager private constructor(private val context: Context) {
         return try {
             val serverClientId = getWebClientId()
 
+            // Configuración de las opciones para solicitar la credencial de ID de Google
             val googleIdOption = GetGoogleIdOption.Builder()
                 .setFilterByAuthorizedAccounts(false)
                 .setServerClientId(serverClientId)
                 .setAutoSelectEnabled(false)
                 .build()
 
+            // Petición enviada al CredentialManager
             val request = GetCredentialRequest.Builder()
                 .addCredentialOption(googleIdOption)
                 .build()
 
+            // Solicita al usuario seleccionar una cuenta mediante la UI del sistema
             val result = credentialManager.getCredential(
                 request = request,
                 context = activity
             )
 
             val credential = result.credential
+            // Verifica que la credencial recibida sea un token de ID de Google válido
             if (credential is CustomCredential &&
                 credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
             ) {
                 val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
                 val idToken = googleIdTokenCredential.idToken
 
-                // Authenticate with Firebase Auth
+                // Autenticar en Firebase Auth utilizando el ID Token de Google recibido
                 val userProfile = if (firebaseAuth != null) {
                     val firebaseCredential = GoogleAuthProvider.getCredential(idToken, null)
                     val authResult = firebaseAuth!!.signInWithCredential(firebaseCredential).await()
@@ -103,6 +139,7 @@ class AuthManager private constructor(private val context: Context) {
                     )
                     user
                 } else {
+                    // Respaldo si Firebase Auth no se encuentra disponible
                     UserProfile(
                         uid = googleIdTokenCredential.id,
                         displayName = googleIdTokenCredential.displayName,
@@ -122,18 +159,21 @@ class AuthManager private constructor(private val context: Context) {
                 Result.failure(Exception(err))
             }
         } catch (e: GetCredentialCancellationException) {
+            // El usuario canceló la ventana modal de inicio de sesión con Google
             _isLoading.value = false
             val msg = "Inicio de sesión con Google cancelado"
             _authError.value = msg
             Log.d(tag, msg)
             Result.failure(e)
         } catch (e: NoCredentialException) {
+            // No hay cuentas configuradas en el dispositivo o emulador
             _isLoading.value = false
             val msg = "No hay cuentas de Google disponibles en este dispositivo/emulador. Puedes ingresar tu correo de Google directamente abajo para autenticar en Firebase."
             _authError.value = msg
             Log.w(tag, msg)
             Result.failure(e)
         } catch (e: Exception) {
+            // Manejo de errores generales o fallos de configuración en Firebase/Google
             _isLoading.value = false
             val errorMsg = e.localizedMessage ?: "Error al conectar con Google"
             Log.e(tag, "Error en Google Sign-In: $errorMsg", e)
@@ -147,9 +187,15 @@ class AuthManager private constructor(private val context: Context) {
     }
 
     /**
-     * Authenticates directly with Firebase Authentication using Email & Password.
-     * If user does not exist in Firebase Auth yet, it automatically creates the account.
-     * This guarantees the user appears in Firebase Authentication Console under 'Authentication -> Users'.
+     * Autentica directamente con Firebase Authentication usando correo y contraseña.
+     *
+     * Si el usuario no existe aún en Firebase Auth, intenta automáticamente crear una nueva cuenta
+     * y le asigna el nombre proporcionado en su perfil.
+     *
+     * @param email Correo electrónico del usuario.
+     * @param pass Contraseña del usuario.
+     * @param name Nombre a asignar al perfil del usuario en caso de creación.
+     * @return [Result] con el [UserProfile] registrado/autenticado, o una excepción si ocurre un error.
      */
     suspend fun authenticateWithFirebaseEmail(
         email: String,
@@ -162,15 +208,16 @@ class AuthManager private constructor(private val context: Context) {
 
         return try {
             val user = try {
-                // Try signing in first
+                // Intenta iniciar sesión con el correo y contraseña proporcionados
                 val result = auth.signInWithEmailAndPassword(email.trim(), pass).await()
                 result.user
             } catch (e: Exception) {
-                // If not found or wrong password, try creating new account
+                // Si el inicio de sesión falla (ej. cuenta no existente), intenta crear una cuenta nueva
                 Log.d(tag, "signInWithEmailAndPassword falló (${e.message}), intentando crear cuenta nueva...")
                 val createResult = auth.createUserWithEmailAndPassword(email.trim(), pass).await()
                 createResult.user?.let { newUser ->
                     try {
+                        // Actualiza el perfil en Firebase con el nombre proporcionado
                         val profileUpdates = UserProfileChangeRequest.Builder()
                             .setDisplayName(name.trim().ifEmpty { email.substringBefore('@') })
                             .build()
@@ -203,6 +250,12 @@ class AuthManager private constructor(private val context: Context) {
         }
     }
 
+    /**
+     * Cierra la sesión del usuario actual.
+     *
+     * Invalida la sesión activa tanto en Firebase Authentication como en la API de
+     * CredentialManager de Android y limpia los estados expuestos a la UI.
+     */
     suspend fun signOut() {
         try {
             firebaseAuth?.signOut()
@@ -215,10 +268,18 @@ class AuthManager private constructor(private val context: Context) {
         }
     }
 
+    /**
+     * Retorna el Web Client ID asociado a la consola de Firebase / Google Cloud
+     * necesario para obtener el Google ID Token mediante CredentialManager.
+     */
     private fun getWebClientId(): String {
         return "252590588787-vu9hk7mh4cil9ris3sjvfp8l7m57rl73.apps.googleusercontent.com"
     }
 
+    /**
+     * Función de extensión para transformar una instancia de [FirebaseUser] en
+     * el modelo de datos local [UserProfile].
+     */
     private fun FirebaseUser.toUserProfile(): UserProfile {
         return UserProfile(
             uid = uid,
@@ -233,6 +294,11 @@ class AuthManager private constructor(private val context: Context) {
         @Volatile
         private var INSTANCE: AuthManager? = null
 
+        /**
+         * Obtiene la instancia única (Singleton) de [AuthManager].
+         *
+         * @param context Contexto utilizado para inicializar la instancia (se convierte a `applicationContext`).
+         */
         fun getInstance(context: Context): AuthManager {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: AuthManager(context.applicationContext).also { INSTANCE = it }
