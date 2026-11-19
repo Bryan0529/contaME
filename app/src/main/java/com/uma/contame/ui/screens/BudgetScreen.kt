@@ -2,9 +2,12 @@ package com.uma.contame.ui.screens
 
 import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import com.uma.contame.ui.components.NotificationPermissionRationaleDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -98,6 +101,7 @@ fun BudgetScreen(
     val context = LocalContext.current
     val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-US")) }
     var testNotificationSent by remember { mutableStateOf(false) }
+    var showRationaleDialog by remember { mutableStateOf(false) }
 
     // Gestor de permisos para notificaciones en Android 13+
     val notificationLauncher = rememberLauncherForActivityResult(
@@ -195,7 +199,15 @@ fun BudgetScreen(
                         }
                         Switch(
                             checked = state.monthlyBudget.notificationsEnabled,
-                            onCheckedChange = onToggleNotifications
+                            onCheckedChange = { enabled ->
+                                if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                                ) {
+                                    showRationaleDialog = true
+                                } else {
+                                    onToggleNotifications(enabled)
+                                }
+                            }
                         )
                     }
 
@@ -204,8 +216,10 @@ fun BudgetScreen(
                     // Botón para probar notificación de alerta
                     OutlinedButton(
                         onClick = {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                            ) {
+                                showRationaleDialog = true
                             } else {
                                 NotificationHelper.sendBudgetWarningNotification(
                                     context = context,
@@ -352,5 +366,20 @@ fun BudgetScreen(
                 }
             }
         }
+    }
+
+    // Diálogo Rationale de explicación UX antes de solicitar permiso de notificaciones (Android 13+)
+    if (showRationaleDialog) {
+        NotificationPermissionRationaleDialog(
+            onConfirm = {
+                showRationaleDialog = false
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            },
+            onDismiss = {
+                showRationaleDialog = false
+            }
+        )
     }
 }

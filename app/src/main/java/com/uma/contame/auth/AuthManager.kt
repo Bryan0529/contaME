@@ -15,6 +15,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -113,11 +114,19 @@ class AuthManager private constructor(private val context: Context) {
                 .addCredentialOption(googleIdOption)
                 .build()
 
-            // Solicita al usuario seleccionar una cuenta mediante la UI del sistema
-            val result = credentialManager.getCredential(
-                request = request,
-                context = activity
-            )
+            // Solicita al usuario seleccionar una cuenta mediante la UI del sistema (con reintento tras NoCredentialException)
+            val result = try {
+                credentialManager.getCredential(
+                    request = request,
+                    context = activity
+                )
+            } catch (e: NoCredentialException) {
+                delay(800)
+                credentialManager.getCredential(
+                    request = request,
+                    context = activity
+                )
+            }
 
             val credential = result.credential
             // Verifica que la credencial recibida sea un token de ID de Google válido
@@ -168,7 +177,7 @@ class AuthManager private constructor(private val context: Context) {
         } catch (e: NoCredentialException) {
             // No hay cuentas configuradas en el dispositivo o emulador
             _isLoading.value = false
-            val msg = "No hay cuentas de Google disponibles en este dispositivo/emulador. Puedes ingresar tu correo de Google directamente abajo para autenticar en Firebase."
+            val msg = "No se encontró una cuenta de Google. Verifica que tengas una agregada en Ajustes del teléfono e intenta de nuevo."
             _authError.value = msg
             Log.w(tag, msg)
             Result.failure(e)

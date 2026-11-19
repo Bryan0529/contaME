@@ -1,19 +1,26 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Reglas de extracción de datos para Android 12 (API 31) y superior.
+   Garantiza que credenciales, tokens de acceso y datos personales almacenados en Room/Preferences
+   no sean incluidos en copias de seguridad en la nube ni en transferencias entre dispositivos.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <!-- Excluir la base de datos local de Room (transacciones, metas, presupuesto) -->
+        <exclude domain="database" path="contame_database" />
+        <exclude domain="database" path="contame_database-shm" />
+        <exclude domain="database" path="contame_database-wal" />
+        <!-- Excluir SharedPreferences (credenciales, tokens de sesión) -->
+        <exclude domain="sharedpref" path="." />
+        <!-- Excluir archivos locales de la aplicación -->
+        <exclude domain="file" path="." />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <!-- Excluir datos sensibles durante transferencias directo de dispositivo a dispositivo -->
+        <exclude domain="database" path="contame_database" />
+        <exclude domain="database" path="contame_database-shm" />
+        <exclude domain="database" path="contame_database-wal" />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="file" path="." />
     </device-transfer>
-    -->
 </data-extraction-rules>

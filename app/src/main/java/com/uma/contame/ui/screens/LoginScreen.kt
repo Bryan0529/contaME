@@ -113,7 +113,7 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = "Control de Gastos, Ingresos y Ahorro",
+                    text = "Gastos, Ingresos y Ahorro",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF94A3B8),
                     textAlign = TextAlign.Center

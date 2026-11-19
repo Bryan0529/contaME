@@ -1,13 +1,16 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Reglas de backup automático para Android 11 (API 30) e inferiores.
+   Garantiza que datos sensibles (credenciales, tokens de acceso y la base de datos local
+   de Room con finanzas del usuario) estén explícitamente excluidos del backup.
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <!-- Excluir base de datos Room con información financiera y personal -->
+    <exclude domain="database" path="contame_database" />
+    <exclude domain="database" path="contame_database-shm" />
+    <exclude domain="database" path="contame_database-wal" />
+    <!-- Excluir preferencias compartidas con tokens/credenciales -->
+    <exclude domain="sharedpref" path="." />
+    <!-- Excluir archivos internos locales -->
+    <exclude domain="file" path="." />
 </full-backup-content>

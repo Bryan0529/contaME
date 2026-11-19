@@ -2,10 +2,12 @@ package com.uma.contame.ui
 
 import android.Manifest
 import android.app.Activity
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -22,6 +24,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -71,11 +75,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.uma.contame.R
+import com.uma.contame.export.ExportReportButton
 import com.uma.contame.model.SavingsGoal
 import com.uma.contame.model.TransactionItem
 import com.uma.contame.model.TransactionType
 import com.uma.contame.ui.components.AddEditGoalDialog
 import com.uma.contame.ui.components.AddEditTransactionDialog
+import com.uma.contame.ui.components.NotificationPermissionRationaleDialog
 import com.uma.contame.ui.components.ContaMeIcon
 import com.uma.contame.ui.components.DepositGoalDialog
 import com.uma.contame.ui.components.GoogleLogoIcon
@@ -140,6 +146,7 @@ fun ContaMeApp(
 
     var showBudgetDialog by remember { mutableStateOf(false) }
     var showAccountDialog by remember { mutableStateOf(false) }
+    var showNotificationRationaleDialog by remember { mutableStateOf(false) }
 
     var txToDelete by remember { mutableStateOf<String?>(null) }
     var goalToDelete by remember { mutableStateOf<String?>(null) }
@@ -149,14 +156,20 @@ fun ContaMeApp(
         currentTab = AppTab.DASHBOARD
     }
 
-    // Petición de permisos para notificaciones en Android 13+
+    // Petición de permisos para notificaciones en Android 13+ usando Activity Result API
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { _ -> }
 
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            if (ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                showNotificationRationaleDialog = true
+            }
         }
     }
 
@@ -202,9 +215,11 @@ fun ContaMeApp(
                                 )
                             }
                             Text(
-                                text = "Control de Gastos, Ingresos y Ahorro",
+                                text = "Gastos, Ingresos y Ahorro",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -237,6 +252,8 @@ fun ContaMeApp(
                             }
                         }
                     }
+
+                    ExportReportButton(state = uiState)
 
                     // Avatar de usuario autenticado
                     val profile = uiState.userProfile!!
@@ -292,8 +309,14 @@ fun ContaMeApp(
                         label = {
                             Text(
                                 text = tab.label,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                modifier = Modifier.wrapContentWidth(unbounded = true),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 10.sp,
+                                    letterSpacing = 0.sp
+                                ),
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                maxLines = 1,
+                                softWrap = false
                             )
                         },
                         colors = NavigationBarItemDefaults.colors(
@@ -574,6 +597,21 @@ fun ContaMeApp(
                 TextButton(onClick = { goalToDelete = null }) {
                     Text("Cancelar")
                 }
+            }
+        )
+    }
+
+    // Diálogo Rationale de explicación UX antes de solicitar permiso de notificaciones (Android 13+)
+    if (showNotificationRationaleDialog) {
+        NotificationPermissionRationaleDialog(
+            onConfirm = {
+                showNotificationRationaleDialog = false
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            },
+            onDismiss = {
+                showNotificationRationaleDialog = false
             }
         )
     }

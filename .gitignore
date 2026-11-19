@@ -16,3 +16,12 @@
 local.properties
 .env
 debug.keystore
+
+# Android Signing Keys & Sensitive Files
+*.jks
+*.keystore
+app/google-services.json
+app/upload-keystore.jks
+.cursor/
+skills/
+AGENTS.md

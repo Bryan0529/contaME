@@ -21,6 +21,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -807,4 +808,69 @@ fun SetBudgetDialog(
             }
         }
     }
+}
+
+/**
+ * Diálogo explicativo (Rationale UX) para solicitar el permiso de notificaciones en Android 13+.
+ *
+ * Muestra una explicación clara del valor y beneficio de las notificaciones antes de activar
+ * la solicitud del sistema operativo mediante Activity Result API.
+ *
+ * @param onConfirm Callback invocado al aceptar proceder con la solicitud del permiso.
+ * @param onDismiss Callback invocado al cancelar o posponer la solicitud.
+ */
+@Composable
+fun NotificationPermissionRationaleDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(Color(0x22F59E0B)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.NotificationsActive,
+                    contentDescription = null,
+                    tint = Color(0xFFF59E0B),
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        },
+        title = {
+            Text(
+                text = "Permiso de Notificaciones en contaME",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        },
+        text = {
+            Text(
+                text = "contaME utiliza notificaciones para enviarte alertas oportunas cuando te aproximas o superas tu límite presupuestario mensual.\n\nEstas alertas te ayudan a mantener el control de tus finanzas en tiempo real y prevenir sobregiros.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Permitir notificaciones")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Ahora no")
+            }
+        },
+        shape = RoundedCornerShape(22.dp)
+    )
 }

@@ -369,7 +369,6 @@ class ContaMeViewModel(application: Application) : AndroidViewModel(application)
     fun addOrUpdateTransaction(item: TransactionItem, context: Context) {
         viewModelScope.launch {
             repository.saveTransaction(item)
-
             if (item.type == TransactionType.EXPENSE) {
                 checkAndDispatchBudgetAlert(context, item.categoryName)
             }

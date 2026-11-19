@@ -127,10 +127,9 @@ class ContaMeRepository private constructor(
         }
     }
 
-    /**
-     * Guarda o actualiza una transacción tanto en la base de datos local Room como en Firebase.
-     *
+    /** Guarda o actualiza una transacción tanto en la base de datos local Room como en Firebase.
      * @param item Transacción a registrar.
+     * @return Guarda la transacción en la base de datos local y en Firebase.
      */
     suspend fun saveTransaction(item: TransactionItem): Result<Unit> = withContext(Dispatchers.IO) {
         val authUid = try {
@@ -173,6 +172,7 @@ class ContaMeRepository private constructor(
         // 2. Eliminar en Firebase
         if (uid != "local") {
             try {
+
                 firestoreService.deleteTransaction(uid, id)
             } catch (e: Exception) {
                 Log.w(tag, "Local eliminado, pero delete Firebase demorado [$uid]: ${e.message}")
