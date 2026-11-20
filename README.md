@@ -1,3 +1,7 @@
+# contaME
+
+Aplicación Android para organizar gastos, ingresos y metas de ahorro.
+
 ## 1. Propósito y funciones principales
 
 **contaME** es una aplicación Android desarrollada en Kotlin para organizar las finanzas personales. Permite registrar ingresos y gastos, controlar presupuestos y metas de ahorro, y consultar la actividad financiera.
@@ -8,7 +12,7 @@
 - Configurar un presupuesto mensual y recibir alertas locales al acercarse o exceder el límite.
 - Crear, editar y eliminar metas de ahorro; consultar su progreso y agregar fondos.
 - Consultar gráficos por categoría, comparar ingresos y gastos mensuales y ver estadísticas como la tasa de ahorro.
-- Generar un reporte Excel (.xlsx) con hojas de resumen, movimientos, historial mensual, metas y registro de acciones; si no hay acciones registradas, la hoja lista los movimientos.
+- Generar un reporte Excel (.xlsx) con hojas de resumen, movimientos, historial mensual, metas y registro de acciones; si no hay acciones registradas, la hoja lista los movimientos. Se puede enviar por correo o WhatsApp con el selector de Android.
 - Compartir un resumen con formato para WhatsApp y una tarjeta de resumen en imagen PNG.
 - Sincronizar el perfil, los movimientos, las metas y los presupuestos con Firestore mediante una cuenta de Google.
 
@@ -23,8 +27,8 @@ La pantalla de inicio ofrece acceso con Google; el método de correo y contrase�
 | Arquitectura | ViewModel y Kotlin Coroutines para estado y operaciones asíncronas. |
 | Datos locales | Room 2.7.0 para persistir movimientos, metas y presupuestos. |
 | Autenticación y datos en la nube | Firebase Authentication y Cloud Firestore (Firebase BoM 34.17.0); AndroidX Credential Manager 1.5.0 y Google Identity Services (`googleid`) 1.1.1 para el inicio de sesión con Google. |
-| Exportación y compartir | Intents de Android (`Intent.ACTION_SEND`) con `FileProvider` para WhatsApp y correo; generador propio de .xlsx sin librerías externas. |
-| Imágenes | `android.graphics` (`Canvas`) para generar la tarjeta de resumen en PNG. |
+| Exportación y compartir | Intents de Android (`Intent.ACTION_SEND`) con `FileProvider` para WhatsApp y correo; generador propio de .xlsx sin librerías externas y android.graphics (Canvas) para dibujar la tarjeta de resumen en PNG. |
+| Imágenes | Coil Compose 2.7.0 para cargar imágenes en la interfaz (por ejemplo, la foto de perfil). |
 | Compilación | Android Gradle Plugin (AGP) 9.1.1, Gradle Wrapper 9.3.1 y JDK 25 para Gradle. |
 
 No se usa la API de WhatsApp Business: el envío se delega a WhatsApp o al cliente de correo del usuario mediante Intents.
@@ -99,9 +103,3 @@ Abre el proyecto en Android Studio, espera a que Gradle termine la sincronizaci�
 ```
 
 En Windows, usa `gradlew.bat :app:assembleDebug` y `gradlew.bat :app:installDebug`.
-
-Hay pruebas unitarias; ejecútalas desde la raíz con:
-
-```bash
-./gradlew :app:testDebugUnitTest
-```
