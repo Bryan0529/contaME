@@ -59,7 +59,7 @@ El repositorio es público. Git ignora `app/google-services.json`, `*.jks`, `*.k
 2. Agrega una aplicación Android con el ID de paquete `com.uma.contame`.
 3. Descarga el archivo de configuración de la aplicación y guárdalo en `app/google-services.json`.
 4. En **Authentication**, habilita el proveedor de inicio de sesión **Google**.
-5. En la raíz del proyecto, ejecuta `./gradlew signingReport` (Windows: `gradlew.bat signingReport`) y registra en Firebase la huella SHA del certificado de depuración.
+5. En Android Studio, abre la ventana **Gradle**, ve a **app > Tasks > android** y ejecuta **signingReport**. Copia la huella SHA-1 y regístrala en Firebase.
 6. Crea la base de datos de **Cloud Firestore**.
 7. Publica estas reglas de seguridad en Firestore:
 
@@ -95,11 +95,4 @@ Room crea la base local al iniciar la aplicación.
 
 ### Ejecutar y probar
 
-Abre el proyecto en Android Studio, espera a que Gradle termine la sincronización, selecciona un emulador o dispositivo Android y pulsa **Run**. También puedes compilar e instalar la versión de depuración desde la raíz:
-
-```bash
-./gradlew :app:assembleDebug
-./gradlew :app:installDebug
-```
-
-En Windows, usa `gradlew.bat :app:assembleDebug` y `gradlew.bat :app:installDebug`.
+Abre el proyecto en Android Studio, espera a que Gradle termine la sincronización, selecciona un emulador o dispositivo Android y pulsa **Run**.
